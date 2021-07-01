@@ -1,27 +1,23 @@
-import urllib.request
 from bs4 import BeautifulSoup
-
-url='https://www.google.com'
-soup = BeautifulSoup(urllib.request.urlopen(url).read(), 'html.parser')
-a_tags = soup.find_all('a')
-result_list = []
-for i in a_tags:
-    result_list.append(i.get_text())
-print(result_list)
-
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 import time
+import datetime
 
+
+
+# 크롬 드라이버 지정
 options = webdriver.ChromeOptions()
 options.add_experimental_option("excludeSwitches", ["enable-logging"])
 
 driver = webdriver.Chrome("C:/Modules/chromedriver.exe")
 driver.implicitly_wait(3)
-# url에 접근한다.
+
+# url에 접근
 driver.get('https://new.portmis.go.kr/portmis/websquare/websquare.jsp?w2xPath=/portmis/w2/main/intro.xml')
 driver.implicitly_wait(3)
 
+# 시설조회 접근
 btn = driver.find_element_by_id('mf_btnSiteMap')
 btn.click()
 
@@ -31,7 +27,8 @@ btn = driver.find_element_by_id('mf_tacMain_contents_M0045_body_genMenuLevel1_1_
 btn.click()
 
 driver.implicitly_wait(10)
-# 항코드 입력 ㅠㅠ드디어 됐다.
+
+# 청(항) 코드 입력 
 selected_tag=driver.find_element_by_css_selector('input#mf_tacMain_contents_M1554_body_srchPrtAgCd')
 selected_tag.click()
 
@@ -49,90 +46,62 @@ driver.implicitly_wait(10)
 el = driver.find_element_by_id('mf_tacMain_contents_M1554_body_udcGridPageView_sbxRecordCount_input_0')
 for option in el.find_elements_by_tag_name('option'):
     if option.text == '50000개씩 보기':
-        option.click() # select() in earlier versions of webdriver
+        option.click()
         break
 
+# 지정한 조건(청코드 820, 50000개씩 조회)으로 검색
 driver.implicitly_wait(10)
 btn = driver.find_element_by_id('mf_tacMain_contents_M1554_body_udcSearchList_btnSearch')
 btn.click()
 
 driver.implicitly_wait(10)
 
+
+# 스크롤 다운
 btn = driver.find_element_by_id('mf_tacMain_contents_M1554_body_grpSrchList_cell_0_0')
 btn.click()
 
-
-
-
-stg_list=[{'num':'-1231'}]
+save_dict={}
 DOWN = '/ue015'
-for _ in range(0,15):
-    num=driver.find_element_by_id('mf_tacMain_contents_M1554_body_grpSrchList_cell_0_0').text
+cnt = 0
 
-    if stg_list[-1]['num'] == num:
-        btn.send_keys(Keys.DOWN)
-        continue
 
-    subnum=driver.find_element_by_id('mf_tacMain_contents_M1554_body_grpSrchList_cell_0_1').text
-    entry_yr=driver.find_element_by_id('mf_tacMain_contents_M1554_body_grpSrchList_cell_0_2').text
-    entry_num=driver.find_element_by_id('mf_tacMain_contents_M1554_body_grpSrchList_cell_0_3').text
-    use_num=driver.find_element_by_id('mf_tacMain_contents_M1554_body_grpSrchList_cell_0_4').text
-    ton=driver.find_element_by_id('mf_tacMain_contents_M1554_body_grpSrchList_cell_0_5').text
-    ship_name=driver.find_element_by_id('mf_tacMain_contents_M1554_body_grpSrchList_cell_0_6').text
-    brch_code=driver.find_element_by_id('mf_tacMain_contents_M1554_body_grpSrchList_cell_0_7').text
-    brch_name=driver.find_element_by_id('mf_tacMain_contents_M1554_body_grpSrchList_cell_0_8').text
-    apfac_code=driver.find_element_by_id('mf_tacMain_contents_M1554_body_grpSrchList_cell_0_9').text
-    apfac_subcode=driver.find_element_by_id('mf_tacMain_contents_M1554_body_grpSrchList_cell_0_10').text
-    apfac_name=driver.find_element_by_id('mf_tacMain_contents_M1554_body_grpSrchList_cell_0_11').text
-    app_from=driver.find_element_by_id('mf_tacMain_contents_M1554_body_grpSrchList_cell_0_12').text
-    app_to=driver.find_element_by_id('mf_tacMain_contents_M1554_body_grpSrchList_cell_0_13').text
-    asfac_code=driver.find_element_by_id('mf_tacMain_contents_M1554_body_grpSrchList_cell_0_14').text
-    acfac_subcode=driver.find_element_by_id('mf_tacMain_contents_M1554_body_grpSrchList_cell_0_15').text
-    asfac_name=driver.find_element_by_id('mf_tacMain_contents_M1554_body_grpSrchList_cell_0_16').text
-    ass_from=driver.find_element_by_id('mf_tacMain_contents_M1554_body_grpSrchList_cell_0_17').text
-    ass_to=driver.find_element_by_id('mf_tacMain_contents_M1554_body_grpSrchList_cell_0_18').text
-    purp=driver.find_element_by_id('mf_tacMain_contents_M1554_body_grpSrchList_cell_0_19').text
+# 마지막 페이지 테이블 데이터 집계 
+def tail_value():
+    for i in range(0,9):
+        save_value = {}
+        for k in range(0,22):
+            value = soup.select_one('#mf_tacMain_contents_M1554_body_grpSrchList_cell_{}_{} > nobr'.format(i, k)).text
+            save_value.setdefault('key_{}'.format(k), value)
+        print(save_value)
+        save_dict['n_{}_{}'.format(datetime.datetime.now().strftime("%Y%m%d"), save_value['key_0'])] = save_value
+# 개수 많은 것 해결하기 위해서 이 에러 처리하는 방법 추가해야 함!
+# AttributeError:
 
-    dataset = {'num':num, 'subnum':subnum, 'entry_yr':entry_yr, 'entry_num':entry_num, 'use_num':use_num, 'ton':ton, 'ship_name':ship_name,
-    'brch_code':brch_code, 'brch_name':brch_name, 'apfac_code':apfac_code, 'apfac_subcode':apfac_subcode,'apfac_name':apfac_name, 'app_from':app_from,
-     'app_to':app_to, 'asfac_code':asfac_code, 'acfac_subcode':acfac_subcode, 'asfac_name':asfac_name, 'ass_from':ass_from, 'ass_to':ass_to, 'purp':purp}
-    
-    stg_list.append(dataset)
+# 데이터 수집
+for _ in range(0,1000):
     btn.send_keys(Keys.DOWN)
-
-print(stg_list)
-
-const mongoose = require('mongoose');
-const MONGODB_URI = process.env.MONGODB_URI;
-
-
-# 순차적으로 리스트안에 저장하는 코드    
-# stg_list=[-100]
-# DOWN = '/ue015'
-# for _ in range(0,15):
-#     result=driver.find_element_by_id('mf_tacMain_contents_M1554_body_grpSrchList_cell_0_0') 
-#     if stg_list[-1] == result.text:
-#         btn.send_keys(Keys.DOWN)
-#         continue
-#     stg_list.append(result.text)
-#     btn.send_keys(Keys.DOWN)
-#     print(stg_list)
-
-
-
-# 순차적으로 데이터가 집계되는 방법
-# DOWN = '/ue015'
-# for _ in range(0,310):
-#     result=driver.find_element_by_id('mf_tacMain_contents_M1554_body_grpSrchList_cell_0_0') 
-#     print(result.text)
-#     btn.send_keys(Keys.DOWN)
-
-# 해당 페이지의 전체 html 소스를 string 형태로 답기 위해 html 저장
-# html = driver.page_source
-# soup = BeautifulSoup(html, 'html.parser')
-
-# for i in range(0,10):
-#     for k in range(0,10):
-#         table = soup.select('#mf_tacMain_contents_M1554_body_grpSrchList_cell_{}_{} > nobr'.format(i, k)).text()
-#         print(table)
+    save_value = {}
+    for k in range(0,22):
+        # 해당 페이지의 전체 html 소스를 string 형태로 답기 위해 html 저장 + 스크롤 다운한 화면을 동적화
+        html = driver.page_source
+        soup = BeautifulSoup(html, 'html.parser')
+        value = soup.select_one('#mf_tacMain_contents_M1554_body_grpSrchList_cell_{}_{} > nobr'.format(0, k)).text
+        # 키값이 없으면 키값에 0을 넣고 만약 있으면 키값을 반환
+        save_value.setdefault('key_{}'.format(k), value)
+        print(value)
     
+    
+    if 'n_{}_{}'.format(datetime.datetime.now().strftime("%Y%m%d"), save_value['key_0']) in save_dict:
+        cnt += 1
+    if cnt > 15:
+        tail_value()
+        break
+
+    save_dict['n_{}_{}'.format(datetime.datetime.now().strftime("%Y%m%d"), save_value['key_0'])] = save_value
+print(save_dict)
+
+
+
+
+
